@@ -7,3 +7,7 @@
 [submodule "midifile"]
 	path = midifile
 	url = https://github.com/clearly-broken-software/midifile.git
+[submodule "filesystem"]
+	path = filesystem
+	url = https://github.com/gulrak/filesystem.git
+	shallow = true	
