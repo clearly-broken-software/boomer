@@ -5,9 +5,8 @@ TODO: Add License
 /*
 see https://distrho.github.io/DPF/group__PluginMacros.html
 */
+#pragma once
 
-#ifndef DISTRHO_PLUGIN_INFO_H_INCLUDED
-#define DISTRHO_PLUGIN_INFO_H_INCLUDED
 
 #define DISTRHO_PLUGIN_BRAND "Clearly Broken Software"
 #define DISTRHO_PLUGIN_NAME "Boomer"
@@ -23,8 +22,8 @@ see https://distrho.github.io/DPF/group__PluginMacros.html
 #define DISTRHO_PLUGIN_WANT_MIDI_INPUT 1
 #define DISTRHO_PLUGIN_WANT_MIDI_OUTPUT 0
 #define DISTRHO_PLUGIN_WANT_PROGRAMS 0
-#define DISTRHO_PLUGIN_WANT_STATE 0
-#define DISTRHO_PLUGIN_WANT_FULL_STATE 0
+#define DISTRHO_PLUGIN_WANT_STATE 1
+#define DISTRHO_PLUGIN_WANT_FULL_STATE 1
 #define DISTRHO_PLUGIN_WANT_TIMEPOS 1
 #define DISTRHO_UI_USE_NANOVG 1
 #define DISTRHO_UI_USER_RESIZABLE 0
@@ -47,4 +46,3 @@ enum Parameters
     kParameterCount
 };
 
-#endif // DISTRHO_PLUGIN_INFO_H_INCLUDED

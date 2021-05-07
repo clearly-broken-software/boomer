@@ -12,38 +12,58 @@ START_NAMESPACE_DISTRHO
 class MidiLooper
 {
 public:
-    MidiLooper();
-    MidiLooper(smf::MidiFile &mf,
-               const double &samplerate,
-               const TimePosition &timePos
-    );
-
     class Callback
     {
     public:
         virtual ~Callback() {}
         virtual void newEvent(MidiLooper *lp, smf::MidiMessage message, int delay) = 0;
+        virtual void midifileEnd() = 0;
     };
-    bool tick(int delay); // forward the sequence;
-    void setCallback(Callback *cb);
-    void setBBT(const TimePosition &timePos);
+    //constructors
+    MidiLooper();
+    MidiLooper(smf::MidiFile midifile, const double &samplerate, Callback *cb);
+    // getters
+    void setTotalTicks();
+    void setSongTotalTicks(int ticks);
+    void getTimeSig();
+    int getTotalTicks();
+    int getCurrentEventTick();
+    int getEventIndex(int tick);
+    double getTPQ(); // TODO: check if needed
+    // setters
+    void setCallback(Callback *cb); // TODO: check if needed
+    void setBBT(const TimePosition &timePos, double ratio);
+    void setTPQ(int tpq);
+    void setEventIndex(uint index);
+    void setOffsetTicks(int tick);
+    
+    // process
+    void tick(int delay, double ratio); // forward the sequence;
+
+    // flags TODO: check if needed
     bool ready;
+    bool playing;
 
 private:
     Callback *callBack;
+    double samplerate;
     void sendEvent(smf::MidiMessage m, int delay);
+    void endOfFile();
     smf::MidiFile mf;
     size_t eventCount;
-    float midifileTPQ;
-    float increment;
-    float globalTick;
+    double midifileTPQ;
+    double increment;
+    double globalTick;
     int totalTicks;
+    int songTotalTicks;
     int totalBars;
+    bool firstLoop;
 
-    int timeSigLower;
-    int timeSigUpper;
-    float ticks_per_bar;
-    float transportTPB;
+    double timeSigLower;
+    double timeSigUpper;
+    double ticks_per_bar;
+    double transportTPB;
+    int offSetTicks;
 };
 
 END_NAMESPACE_DISTRHO

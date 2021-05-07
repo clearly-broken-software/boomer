@@ -1,190 +1,170 @@
 /*
 * 
 */
-#include "DistrhoPluginInfo.h"
-#include "DistrhoUI.hpp"
+#include "BoomerUI.hpp"
 
 START_NAMESPACE_DISTRHO
 
-class BoomerUI : public UI
+BoomerUI::BoomerUI()
+    : UI(1000, 600), fScale(1.0f)
 {
-public:
-    BoomerUI()
-        : UI(400, 400), fScale(1.0f)
-    {
-        std::memset(fParameters, 0, sizeof(float) * kParameterCount);
-        std::memset(fStrBuf, 0, sizeof(char) * (0xff + 1));
+    // char *p = getenv("HOME");
+    // if (p)
+    //     printf("%s\n", p);
+    midiDir = ghc::filesystem::current_path();
 
-        fSampleRate = getSampleRate();
-        fFont = createFontFromFile("sans", "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf");
-        std::memset(fParameters, 0, sizeof(float) * kParameterCount);
-        std::memset(fStrBuf, 0, sizeof(char) * (0xff + 1));
+    std::memset(fParameters, 0, sizeof(float) * kParameterCount);
+    std::memset(fStrBuf, 0, sizeof(char) * (0xff + 1));
 
-        fSampleRate = getSampleRate();
-        fFont = createFontFromFile("sans", "/usr/share/fonts/truetype/roboto/unhinted/RobotoTTF/Roboto-Regular.ttf");
-    }
+    fSampleRate = getSampleRate();
+    fFont = createFontFromFile("sans", "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf");
+    std::memset(fParameters, 0, sizeof(float) * kParameterCount);
+    std::memset(fStrBuf, 0, sizeof(char) * (0xff + 1));
 
-protected:
-    void parameterChanged(uint32_t index, float value) override
-    {
-        fParameters[index] = value;
-        repaint();
-    }
+    fSampleRate = getSampleRate();
+    fFont = createFontFromFile("sans", "/usr/share/fonts/truetype/roboto/unhinted/RobotoTTF/Roboto-Regular.ttf");
 
-    void sampleRateChanged(double newSampleRate) override
-    {
-        fSampleRate = newSampleRate;
-        repaint();
-    }
+    fListView.reset(new ListView(this));
+    //fListView = new ListView(this);
+    fListView->background_color = black_olive;
+    fListView->foreground_color = black_olive_2;
+    fListView->highlight_color = flame_2;
+    fListView->text_color = floral_white;
+    fListView->setCallback(this);
+    fListView->setId(42);
+    fListView->setMaxViewItems(32);
+    fListView->setSize(200, (32) * fListView->font_size);
+    fListView->setAbsolutePos(10, 10);
+    fListView->setFont("Roboto_Regular",
+                       reinterpret_cast<const uchar *>(fonts::Roboto_RegularData),
+                       fonts::Roboto_RegularDataSize);
+    fListView->show();
 
-    void onNanoDisplay() override
-    {
-        const float lineHeight = 20 * fScale;
-
-        fontSize(15.0f * fScale);
-        textLineHeight(lineHeight);
-
-        float x = 0.0f * fScale;
-        float y = 15.0f * fScale;
-
-        // buffer size
-        drawLeft(x, y, "Buffer Size:");
-        drawRight(x, y, getTextBufInt(fParameters[kParameterBufferSize]));
-        y += lineHeight;
-
-        // sample rate
-        drawLeft(x, y, "Sample Rate:");
-        drawRight(x, y, getTextBufFloat(fSampleRate));
-        y += lineHeight;
-
-        // nothing
-        y += lineHeight;
-
-        // time stuff
-        drawLeft(x, y, "Playing:");
-        drawRight(x, y, (fParameters[kParameterTimePlaying] > 0.5f) ? "Yes" : "No");
-        y += lineHeight;
-
-        drawLeft(x, y, "Frame:");
-        drawRight(x, y, getTextBufInt(fParameters[kParameterTimeFrame]));
-        y += lineHeight;
-
-        drawLeft(x, y, "Time:");
-        drawRight(x, y, getTextBufTime(fParameters[kParameterTimeFrame]));
-        y += lineHeight;
-
-        // BBT
-        x = 200.0f * fScale;
-        y = 15.0f * fScale;
-
-        const bool validBBT(fParameters[kParameterTimeValidBBT] > 0.5f);
-        drawLeft(x, y, "BBT Valid:");
-        drawRight(x, y, validBBT ? "Yes" : "No");
-        y += lineHeight;
-
-        if (!validBBT)
-            return;
-
-        drawLeft(x, y, "Bar:");
-        drawRight(x, y, getTextBufInt(fParameters[kParameterTimeBar]));
-        y += lineHeight;
-
-        drawLeft(x, y, "Beat:");
-        drawRight(x, y, getTextBufInt(fParameters[kParameterTimeBeat]));
-        y += lineHeight;
-
-        drawLeft(x, y, "Tick:");
-        drawRight(x, y, getTextBufInt(fParameters[kParameterTimeTick]));
-        y += lineHeight;
-
-        drawLeft(x, y, "Bar Start Tick:");
-        drawRight(x, y, getTextBufFloat(fParameters[kParameterTimeBarStartTick]));
-        y += lineHeight;
-
-        drawLeft(x, y, "Beats Per Bar:");
-        drawRight(x, y, getTextBufFloat(fParameters[kParameterTimeBeatsPerBar]));
-        y += lineHeight;
-
-        drawLeft(x, y, "Beat Type:");
-        drawRight(x, y, getTextBufFloat(fParameters[kParameterTimeBeatType]));
-        y += lineHeight;
-
-        drawLeft(x, y, "Ticks Per Beat:");
-        drawRight(x, y, getTextBufFloat(fParameters[kParameterTimeTicksPerBeat]));
-        y += lineHeight;
-
-        drawLeft(x, y, "BPM:");
-        drawRight(x, y, getTextBufFloat(fParameters[kParameterTimeBeatsPerMinute]));
-        y += lineHeight;
-    }
-
-    // -------------------------------------------------------------------------------------------------------
-
-private:
-    // Parameters
-    float fParameters[kParameterCount];
-    double fSampleRate;
-
-    // UI stuff
-    FontId fFont;
-    float fScale;
-
-    // temp buf for text
-    char fStrBuf[0xff + 1];
-
-    // helpers for putting text into fStrBuf and returning it
-    const char *getTextBufInt(const int value)
-    {
-        std::snprintf(fStrBuf, 0xff, "%i", value);
-        return fStrBuf;
-    }
-
-    const char *getTextBufFloat(const float value)
-    {
-        std::snprintf(fStrBuf, 0xff, "%.1f", value);
-        return fStrBuf;
-    }
-
-    const char *getTextBufTime(const uint64_t frame)
-    {
-        const uint32_t time = frame / uint64_t(fSampleRate);
-        const uint32_t secs = time % 60;
-        const uint32_t mins = (time / 60) % 60;
-        const uint32_t hrs = (time / 3600) % 60;
-        std::snprintf(fStrBuf, 0xff, "%02i:%02i:%02i", hrs, mins, secs);
-        return fStrBuf;
-    }
-
-    // helpers for drawing text
-    void drawLeft(const float x, const float y, const char *const text)
-    {
-        beginPath();
-        fillColor(200, 200, 200);
-        textAlign(ALIGN_RIGHT | ALIGN_TOP);
-        textBox(x, y, 100 * fScale, text);
-        closePath();
-    }
-
-    void drawRight(const float x, const float y, const char *const text)
-    {
-        beginPath();
-        fillColor(255, 255, 255);
-        textAlign(ALIGN_LEFT | ALIGN_TOP);
-        textBox(x + (105 * fScale), y, 100 * fScale, text);
-        closePath();
-    }
-
-    DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BoomerUI)
-};
-
-/* ------------------------------------------------------------------------------------------------------------
- * UI entry point, called by DPF to create a new UI instance. */
-
-UI *createUI()
-{
-    return new BoomerUI();
+    std::vector<fs::path> tree;
+    makeTree(midiDir, tree);
+    fListView->addItems(tree);
 }
 
+void BoomerUI::parameterChanged(uint32_t index, float value)
+{
+    fParameters[index] = value;
+    repaint();
+}
+
+void BoomerUI::sampleRateChanged(double newSampleRate)
+{
+    fSampleRate = newSampleRate;
+    repaint();
+}
+void BoomerUI::stateChanged(const char *key, const char *value)
+{
+    // do stuff
+}
+
+void BoomerUI::onNanoDisplay()
+{
+    // do stuff
+}
+
+void BoomerUI::makeTree(fs::path filePath, std::vector<fs::path> &tree)
+{
+    std::vector<fs::path> tmp;
+    tree.push_back(filePath);               // current path
+    tree.push_back(filePath.parent_path()); // display as ../
+    for (auto &p : fs::directory_iterator(filePath))
+    {
+        std::string fn = p.path().filename();
+        if (fn[0] == '.')
+        {
+            continue;
+        } // add dirs
+        if (fs::is_directory(p))
+        {
+            tmp.push_back(p.path());
+            continue;
+        }
+    }
+    std::sort(tmp.begin(), tmp.end());
+    tree.insert(tree.end(), tmp.begin(), tmp.end());
+    tmp.clear();
+
+    // only add .mid files
+    for (auto &p : fs::directory_iterator(filePath))
+    {
+        // get extension
+        std::string e = p.path().extension();
+        // convert string to lower case
+        std::for_each(e.begin(), e.end(), [](char &c) {
+            c = ::tolower(c);
+        });
+        if (e == ".mid")
+            tmp.push_back(p.path());
+    }
+    std::sort(tmp.begin(), tmp.end());
+    tree.insert(tree.end(), tmp.begin(), tmp.end());
+}
+
+void BoomerUI::onListViewClicked(ListView *lv, fs::path item)
+{
+    fs::path p = item;
+    if (fs::is_directory(p))
+    {
+        midiDir = p;
+        std::vector<fs::path> tree;
+        makeTree(p, tree);
+        fListView->addItems(tree);
+        repaint();
+    }
+    else
+    {
+        setState("midifile", item.c_str());
+        //printf("item = %s\n", item.c_str());
+    }
+}
+
+// -------------------------------------------------------------------------------------------------------
+
+// helpers for putting text into fStrBuf and returning it
+const char *BoomerUI::getTextBufInt(const int value)
+{
+    std::snprintf(fStrBuf, 0xff, "%i", value);
+    return fStrBuf;
+}
+
+const char *BoomerUI::getTextBufFloat(const float value)
+{
+    std::snprintf(fStrBuf, 0xff, "%.1f", value);
+    return fStrBuf;
+}
+
+const char *BoomerUI::getTextBufTime(const uint64_t frame)
+{
+    const uint32_t time = frame / uint64_t(fSampleRate);
+    const uint32_t secs = time % 60;
+    const uint32_t mins = (time / 60) % 60;
+    const uint32_t hrs = (time / 3600) % 60;
+    std::snprintf(fStrBuf, 0xff, "%02i:%02i:%02i", hrs, mins, secs);
+    return fStrBuf;
+}
+
+// helpers for drawing text
+void BoomerUI::drawLeft(const float x, const float y, const char *const text)
+{
+    beginPath();
+    fillColor(200, 200, 200);
+    textAlign(ALIGN_RIGHT | ALIGN_TOP);
+    textBox(x, y, 100 * fScale, text);
+    closePath();
+}
+
+void BoomerUI::drawRight(const float x, const float y, const char *const text)
+{
+    beginPath();
+    fillColor(255, 255, 255);
+    textAlign(ALIGN_LEFT | ALIGN_TOP);
+    textBox(x + (105 * fScale), y, 100 * fScale, text);
+    closePath();
+}
 // -----------------------------------------------------------------------------------------------------------
 
 END_NAMESPACE_DISTRHO

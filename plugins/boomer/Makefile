@@ -14,12 +14,13 @@ NAME = boomer
 
 FILES_DSP = \
 	BoomerPlugin.cpp \
-	MidiLooper.cpp
+	MidiLooper.cpp \
+	Song.cpp
 	
 FILES_UI  = \
-	BoomerUI.cpp 
-	
-
+	BoomerUI.cpp \
+	widgets/src/ListView.cpp \
+	fonts.cpp
 
 # --------------------------------------------------------------
 # Do some magic
@@ -33,8 +34,10 @@ BUILD_CXX_FLAGS += $(SFIZZ_CXX_FLAGS)
 LINK_FLAGS += $(SFIZZ_LINK_FLAGS)
 LINK_FLAGS += $(shell $(PKG_CONFIG) --libs fmt)
 LINK_FLAGS += ../../midifile/lib/libmidifile.a
-BASE_FLAGS += -I../../midifile/include
-BASE_FLAGS += -I../../fmidi
+BASE_FLAGS += -I../../midifile/include -I../../fmidi \
+	-I../../sfizz/external/filesystem/include/ghc \
+	-I./widgets \
+	-I./Ring-Buffer
 
 # --------------------------------------------------------------
 # Enable lv2, vst and jack app

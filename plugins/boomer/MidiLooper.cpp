@@ -2,72 +2,30 @@
 #include "MidiLooper.hpp"
 
 START_NAMESPACE_DISTRHO
-
+// default ctor
 MidiLooper::MidiLooper() : eventCount(0),
-                           globalTick(0.0f),
-                           increment(0.0f),
+                           globalTick(0.0),
+                           increment(0.0),
                            ready(false),
-                           totalTicks(0)
+                           totalTicks(0),
+                           playing(false),
+                           firstLoop(true),
+                           offSetTicks(0)
 {
 }
 
-MidiLooper::MidiLooper(smf::MidiFile &f,
-                       const double &samplerate,
-                       const TimePosition &timePos)
+MidiLooper::MidiLooper(smf::MidiFile midifile, const double &sr, Callback *cb)
 {
-    mf = f;
+    firstLoop = true;
+    offSetTicks = 0;
+    callBack = cb;
+    mf = midifile;
     eventCount = 0;
-    globalTick = 0.0f;
-    //set midifile tpq to transport tpq
-    float transportTimeSigLower = timePos.bbt.beatType;
-    //  float transportTImeSigUpper = timePos.bbt.beatsPerBar;
-    float transportTicksPerBeat = timePos.bbt.ticksPerBeat;
-    float transportBPM = timePos.bbt.beatsPerMinute;
-    float transportTPQ = transportTimeSigLower / 4.0f * transportTicksPerBeat;
+    globalTick = 0.0;
+    playing = false;
+    samplerate = sr;
     mf.joinTracks();
-
-    float mfTPQ = mf.getTicksPerQuarterNote();
-    float ratio = transportTPQ / mfTPQ;
-    for (int i = 0; i < mf[0].size(); ++i)
-    {
-        float event_tick = mf[0][i].tick;
-        mf[0][i].tick = static_cast<int>(std::round(event_tick * ratio));
-    }
-
-    // get increment
-    timeSigLower = 4;
-    timeSigUpper = 4;
-    for (int i = 0; i < mf[0].size(); ++i)
-    {
-        if (mf[0][i].isTimeSignature())
-        {
-            timeSigLower = std::pow(2, mf[0][i][4]);
-            timeSigUpper = mf[0][i][3];
-        }
-    }
-
-    float beat_in_seconds = 60.f / transportBPM;
-    float beat_in_samples = beat_in_seconds * samplerate;
-    float quarter_in_samples = 4.0f / static_cast<float>(timeSigLower) * beat_in_samples;
-    float tick_in_samples = quarter_in_samples / transportTPQ;
-    increment = 1.0f / tick_in_samples;
-
-    // calc totalTicks
-    // quarter notes per bar
-    float beat_in_quarternotes = timeSigLower / 4.0f;
-    float quarternotes_per_bar = timeSigUpper / beat_in_quarternotes;
-    // ticks per bar
-    ticks_per_bar = quarternotes_per_bar * transportTPQ;
-
-    // round up the number of bars in the file
-    float durInTicks = mf.getFileDurationInTicks();
-    float bars = durInTicks / ticks_per_bar;
-    float p = bars / ticks_per_bar;
-    int totalBars = static_cast<int>(ceilf(bars));
-
-    totalTicks = totalBars * static_cast<int>(ticks_per_bar);
-
-    ready = true;
+    getTimeSig();
 }
 
 void MidiLooper::setCallback(Callback *cb)
@@ -80,47 +38,153 @@ void MidiLooper::sendEvent(smf::MidiMessage m, int delay)
     callBack->newEvent(this, m, delay);
 }
 
-void MidiLooper::setBBT(const TimePosition &timePos)
+void MidiLooper::endOfFile()
 {
-    int barStartTick = timePos.bbt.barStartTick;
-    int ticksPerBeat = timePos.bbt.ticksPerBeat;
-    // float bar = timePos.bbt.bar;
-    int beat = timePos.bbt.beat;
-    int tick = timePos.bbt.tick;
-    int currentTick = barStartTick + (beat - 1) * ticksPerBeat + tick;
-    globalTick = static_cast<float>(currentTick % totalTicks);
-    // printf ("globalTick %i\n",static_cast<int>(globalTick));
+    callBack->midifileEnd();
 }
 
-bool MidiLooper::tick(int delay)
+void MidiLooper::setBBT(const TimePosition &timePos, double ratio)
 {
-    int t = mf[0][eventCount].tick;
-    int maxEvents = mf[0].getEventCount();
-    int gt = globalTick;
-    //std::cout << std::dec << gt << '\t' << t << ', ';
+    // get increment
+    const double beat_in_seconds = 60. / timePos.bbt.beatsPerMinute;
+    const double beat_in_samples = beat_in_seconds * samplerate;
+    const double quarter_in_samples = 4. / timeSigLower * beat_in_samples;
+    // ticksPerBeat to ticks per Quarternote
+    const double beatLowerMultiplier = timePos.bbt.beatType / 4.;
+    const double ticksPerQuarternote = timePos.bbt.ticksPerBeat * beatLowerMultiplier;
+    const double tick_in_samples = quarter_in_samples / ticksPerQuarternote;
+    increment = 1.0f / tick_in_samples;
 
-    if (static_cast<int>(globalTick) == t)
+    // set global tick
+    const double barStartTick = timePos.bbt.barStartTick;
+    const double ticksPerBeat = timePos.bbt.ticksPerBeat;
+    const int beat = timePos.bbt.beat;
+    const int tick = timePos.bbt.tick;
+    const int currentTick = barStartTick +
+                            (beat - 1) * ticksPerBeat +
+                            tick;
+    const int tt = static_cast<int>(static_cast<double>(songTotalTicks) * ratio);
+    globalTick = static_cast<float>(currentTick % tt) - offSetTicks;
+    // globalTick = currentTick;
+    //printf("globalTick %f\n", globalTick);
+}
+
+double MidiLooper::getTPQ()
+{
+    return mf.getTPQ();
+}
+
+void MidiLooper::tick(int delay, double ratio)
+{
+    const int t = static_cast<double>(mf[0][eventCount].tick) * ratio;
+    const int maxEvents = mf[0].getEventCount();
+    const int gt = static_cast<int>(globalTick);
+    if (gt == t)
     {
-        while (eventCount < maxEvents && mf[0][eventCount].tick == t)
+        while (eventCount < maxEvents &&
+               static_cast<int>(static_cast<double>(mf[0][eventCount].tick) * ratio) == t)
         {
-            std::cout << std::dec << mf[0][eventCount].tick;
-            std::cout << '\t' << std::hex;
-            for (int i = 0; i < mf[0][eventCount].size(); i++)
-                std::cout << (int)mf[0][eventCount][i] << ' ';
-            std::cout << std::endl;
-
             sendEvent(mf[0][eventCount], delay);
             eventCount++;
         }
     }
     globalTick += increment;
-    if (globalTick > totalTicks)
-        globalTick -= totalTicks;
+    if (globalTick > (totalTicks * ratio))
+    {
+        globalTick -= totalTicks * ratio;
+    }
 
     if (eventCount >= maxEvents)
+    {
         eventCount = 0;
+        firstLoop = true;
+        endOfFile();
+    }
+}
 
-    return false;
+int MidiLooper::getCurrentEventTick()
+{
+    return mf[0][eventCount].tick;
+}
+
+int MidiLooper::getEventIndex(int tick)
+{
+    for (int i = 0; i < mf.getEventCount(0); ++i)
+    {
+        if (mf[0][i].tick >= tick)
+            return i;
+    }
+    return 0;
+}
+
+void MidiLooper::setEventIndex(uint index)
+{
+    if (index < mf[0].getEventCount())
+        eventCount = index;
+}
+
+void MidiLooper::setTPQ(int songTPQ)
+{
+    const double mfTPQ = mf.getTPQ();
+    if (static_cast<int>(mfTPQ) != songTPQ)
+    {
+        const auto ratio = static_cast<double>(songTPQ) / mfTPQ;
+        for (int i = 0; i < mf[0].getEventCount(); i++)
+        {
+            const double t = mf[0][i].tick;
+            mf[0][i].tick = t * ratio;
+        }
+        mf.setTicksPerQuarterNote(songTPQ);
+    }
+}
+
+void MidiLooper::setOffsetTicks(int ticks)
+{
+    offSetTicks = ticks;
+}
+
+void MidiLooper::setSongTotalTicks(int ticks)
+{
+    songTotalTicks = ticks;
+}
+
+void MidiLooper::setTotalTicks()
+{
+    // get totalTicks
+    // quarter notes per bar
+    float beat_in_quarternotes = timeSigLower / 4.0f;
+    float quarternotes_per_bar = timeSigUpper / beat_in_quarternotes;
+    // ticks per bar
+    ticks_per_bar = quarternotes_per_bar * mf.getTicksPerQuarterNote();
+
+    /* 
+        smf::getFildeDurationInTics() returns the tick of the last event,
+        tick 0 still means a length of 1 
+    */
+    float durInTicks = mf.getFileDurationInTicks() + 1;
+    float bars = durInTicks / ticks_per_bar;
+    // round up the number of bars in the file
+    int totalBars = static_cast<int>(ceilf(bars));
+    totalTicks = totalBars * static_cast<int>(ticks_per_bar);
+}
+
+int MidiLooper::getTotalTicks()
+{
+    return totalTicks;
+}
+
+void MidiLooper::getTimeSig()
+{
+    timeSigLower = 4;
+    timeSigUpper = 4;
+    for (int i = 0; i < mf[0].size(); ++i)
+    {
+        if (mf[0][i].isTimeSignature())
+        {
+            timeSigLower = std::pow(2, mf[0][i][4]);
+            timeSigUpper = mf[0][i][3];
+        }
+    }
 }
 
 END_NAMESPACE_DISTRHO

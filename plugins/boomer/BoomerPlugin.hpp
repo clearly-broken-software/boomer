@@ -10,7 +10,9 @@ TODO: Add license
 #include "MidiFile.h"
 #include "MidiHelpers.h"
 #include "MidiLooper.hpp"
+#include "filesystem.hpp"
 #include "sfizz.hpp"
+#include "Song.hpp"
 #include <iostream>
 
 START_NAMESPACE_DISTRHO
@@ -65,28 +67,28 @@ protected:
     return d_cconst('B', 'o', 'm', 'R');
   }
 
+  void initState(uint32_t index, String &stateKey, String &defaultStateValue) override;
+  void setState(const char *key, const char *value) override;
+  String getState(const char *key) const;
   void initParameter(uint32_t index, Parameter &parameter) override;
   float getParameterValue(uint32_t index) const override;
   void setParameterValue(uint32_t index, float value) override;
   void run(const float **, float **outputs, uint32_t frames, const MidiEvent *midiEvents, uint32_t midiEventCount) override;
   void bufferSizeChanged(uint32_t newBufferSize) override;
 
-  protected:
-
   void newEvent(MidiLooper *lp, smf::MidiMessage ev, int delay) override;
+  void midifileEnd() override;
 
 private:
-  MidiLooper looper;
-  void toTransportTicks(smf::MidiFile &mf, const float &tpq);
-  bool isTransportTicks;
+  void loadMidifile(const char *path);
+  const float transportTPQ{1920.f};
+  Song song;
+  ghc::filesystem::path mf_path;
   double sampleRate;
   float fParameters[kParameterCount];
-  smf::MidiFile midifile;
-  bool finished;
   sfz::Sfizz synth;
   double tempo;
-  size_t eventCount;
-
+  
   DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BoomerPlugin)
 };
 

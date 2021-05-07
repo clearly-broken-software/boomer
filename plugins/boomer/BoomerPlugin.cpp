@@ -5,30 +5,45 @@ TODO: Add license
 
 START_NAMESPACE_DISTRHO
 
-BoomerPlugin::BoomerPlugin() : Plugin(kParameterCount, 0, 0)
+BoomerPlugin::BoomerPlugin() : Plugin(kParameterCount, 0, 1)
 {
+  mf_path = ghc::filesystem::current_path();
   tempo = 120.;
+  //
   // init the synth
   sampleRate = getSampleRate();
   synth.setSampleRate(sampleRate);
+  //synth.loadSfzFile("/home/rob/Muziek/1234_sfz/1234.sfz");
   synth.loadSfzFile("/home/rob/git/boomer/plugins/boomer/AVL_Drumkits_1.1-fix/Black_Pearl_5pc.sfz");
-  midifile.read("/home/rob/git/boomer/plugins/boomer/test.mid");
 
-  int tracks = midifile.getTrackCount();
-  std::cout << "TPQ: " << midifile.getTicksPerQuarterNote() << std::endl;
+  // init song
+  song.setSamplerate(sampleRate);
+  song.setCallback(this);
+}
 
-  for (int track = 0; track < tracks; track++)
+String BoomerPlugin::getState(const char *key) const
+{
+  return String(mf_path.c_str());
+}
+
+void BoomerPlugin::initState(uint32_t index, String &stateKey, String &defaultStateValue)
+{
+  switch (index)
   {
-    std::cout << "Tick\tMessage" << std::endl;
-    for (int event = 0; event < midifile[track].size(); event++)
-    {
-      std::cout << std::dec << midifile[track][event].tick;
-      std::cout << '\t' << std::hex;
-      for (int i = 0; i < midifile[track][event].size(); i++)
-        std::cout << (int)midifile[track][event][i] << ' ';
-      std::cout << std::endl;
-    }
+  case 0:
+    stateKey = "midifile";
+    defaultStateValue = "";
+    break;
+
+  default:
+    break;
   }
+}
+
+void BoomerPlugin::setState(const char *key, const char *value)
+{
+  if (std::strcmp(key, "midifile") == 0)
+    loadMidifile(value);
 }
 
 void BoomerPlugin::initParameter(uint32_t index, Parameter &parameter)
@@ -128,22 +143,17 @@ void BoomerPlugin::run(const float **, float **outputs, uint32_t frames,
   // set bbt
   if (timePos.bbt.valid)
   {
-    if (!looper.ready)
-    {
-      looper = MidiLooper(midifile,
-                          sampleRate,
-                          timePos);
-      looper.setCallback(this);
-    }
-    else
-    {
-      if (timePos.playing)
+    if (timePos.playing && song.currentPattern)
+    { // midifile tpq
+      const double midifileTPQ = song.currentPattern->getTPQ(); // hard coded to 1920
+      // tpBeat to tpQ
+      const double beatLowerMultiplier = timePos.bbt.beatType / 4.;
+      const double ticksPerQuarternote = timePos.bbt.ticksPerBeat * beatLowerMultiplier;
+      const double ratio = ticksPerQuarternote / midifileTPQ;
+      song.currentPattern->setBBT(timePos, ratio);
+      for (int delay = 0; delay < frames; ++delay)
       {
-        looper.setBBT(timePos);
-        for (int delay = 0; delay < frames; ++delay)
-        {
-          looper.tick(delay);
-        }
+        song.currentPattern->tick(delay, ratio);
       }
     }
 
@@ -180,6 +190,7 @@ void BoomerPlugin::newEvent(MidiLooper *lp, smf::MidiMessage message, int delay)
   {
     const int nn = message.getKeyNumber();
     const int vv = message.getVelocity();
+    printf("note %i \n", nn);
     synth.noteOn(delay, nn, vv);
     return;
   }
@@ -192,4 +203,32 @@ void BoomerPlugin::newEvent(MidiLooper *lp, smf::MidiMessage message, int delay)
   }
 }
 
+void BoomerPlugin::midifileEnd()
+{
+  song.nextPattern();
+}
+
+void BoomerPlugin::loadMidifile(const char *path)
+{
+  song.addPattern(path);
+  song.nextPattern();
+  //  if (loop2.playing) // prepare buffer 1
+  // {
+  //   midifile1.clear();
+  //   midifile1.read(path);
+  //   loop1 = MidiLooper(midifile1, sampleRate, transportTPQ);
+  //   loop1.setCallback(this);
+
+  //   if (timePos.bbt.valid)
+  //   {
+  //     loop1.setTempo(timePos.bbt.beatsPerMinute, sampleRate, transportTPQ);
+  //   }
+  //   int tick = loop2.getCurrentEventTick();
+  //   int index = loop1.getEventIndex(tick);
+  //   loop1.setEventIndex(index);
+  //   pMidiLooper = &loop1;
+  //   loop1.playing = true;
+  //   return;
+  // }
+}
 END_NAMESPACE_DISTRHO
