@@ -10,20 +10,40 @@ MidiLooper::MidiLooper() : eventCount(0),
                            totalTicks(0),
                            playing(false),
                            firstLoop(true),
-                           offSetTicks(0)
+                           offSetTicks(0),
+                           callBack(nullptr),
+                           samplerate(0.0),
+                           midifileTPQ(0),
+                           songTotalTicks(0),
+                           totalBars(0),
+                           timeSigLower(0.0),
+                           timeSigUpper(0.0),
+                           ticks_per_bar(0.0),
+                           transportTPB(0.0)
 {
 }
 
-MidiLooper::MidiLooper(smf::MidiFile midifile, const double &sr, Callback *cb)
+MidiLooper::MidiLooper(smf::MidiFile midifile,
+                       const double &sr, Callback *cb) : callBack(cb),
+                                                         samplerate(sr),
+                                                         eventCount(0),
+                                                         globalTick(0.0),
+                                                         increment(0.0),
+                                                         ready(false),
+                                                         totalTicks(0),
+                                                         playing(false),
+                                                         firstLoop(true),
+                                                         offSetTicks(0),
+
+                                                         midifileTPQ(0),
+                                                         songTotalTicks(0),
+                                                         totalBars(0),
+                                                         timeSigLower(0.0),
+                                                         timeSigUpper(0.0),
+                                                         ticks_per_bar(0.0),
+                                                         transportTPB(0.0)
 {
-    firstLoop = true;
-    offSetTicks = 0;
-    callBack = cb;
     mf = midifile;
-    eventCount = 0;
-    globalTick = 0.0;
-    playing = false;
-    samplerate = sr;
     mf.joinTracks();
     getTimeSig();
 }
