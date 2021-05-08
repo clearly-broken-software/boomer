@@ -36,7 +36,7 @@ protected:
 
   /**
       Get an extensive comment/description about the plugin.
-    */
+  **/
   const char *getDescription() const override
   {
     return "because drums go boom";
@@ -85,7 +85,6 @@ private:
   Song song;
   ghc::filesystem::path mf_path;
   double sampleRate;
-  float fParameters[kParameterCount];
   sfz::Sfizz synth;
   double tempo;
   

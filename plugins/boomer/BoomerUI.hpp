@@ -30,30 +30,12 @@ private:
     void makeTree(fs::path p, std::vector<fs::path> &tree);
     fs::path midiDir;
     std::unique_ptr<ListView> fListView;
-    //ScopedPointer<ListView> fListView;
-
     // Parameters
-    float fParameters[kParameterCount];
     double fSampleRate;
 
     // UI stuff
     FontId fFont;
     float fScale;
-
-    // temp buf for text
-    char fStrBuf[0xff + 1];
-
-    // helpers for putting text into fStrBuf and returning it
-    const char *getTextBufInt(const int value);
-
-    const char *getTextBufFloat(const float value);
-
-    const char *getTextBufTime(const uint64_t frame);
-
-    // helpers for drawing text
-    void drawLeft(const float x, const float y, const char *const text);
-
-    void drawRight(const float x, const float y, const char *const text);
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BoomerUI)
 };

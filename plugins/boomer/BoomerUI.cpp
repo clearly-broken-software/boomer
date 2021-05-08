@@ -12,15 +12,7 @@ BoomerUI::BoomerUI()
     // if (p)
     //     printf("%s\n", p);
     midiDir = ghc::filesystem::current_path();
-
-    std::memset(fParameters, 0, sizeof(float) * kParameterCount);
-    std::memset(fStrBuf, 0, sizeof(char) * (0xff + 1));
-
-    fSampleRate = getSampleRate();
-    fFont = createFontFromFile("sans", "/usr/share/fonts/truetype/ttf-dejavu/DejaVuSans.ttf");
-    std::memset(fParameters, 0, sizeof(float) * kParameterCount);
-    std::memset(fStrBuf, 0, sizeof(char) * (0xff + 1));
-
+   
     fSampleRate = getSampleRate();
     fFont = createFontFromFile("sans", "/usr/share/fonts/truetype/roboto/unhinted/RobotoTTF/Roboto-Regular.ttf");
 
@@ -45,18 +37,17 @@ BoomerUI::BoomerUI()
     fListView->addItems(tree);
 }
 
-void BoomerUI::parameterChanged(uint32_t index, float value)
+void BoomerUI::parameterChanged(uint32_t , float )
 {
-    fParameters[index] = value;
-    repaint();
-}
+    // do stuff
+  }
 
-void BoomerUI::sampleRateChanged(double newSampleRate)
+void BoomerUI::sampleRateChanged(double )
 {
-    fSampleRate = newSampleRate;
-    repaint();
+   // do stuff
+  
 }
-void BoomerUI::stateChanged(const char *key, const char *value)
+void BoomerUI::stateChanged(const char *, const char *)
 {
     // do stuff
 }
@@ -122,49 +113,6 @@ void BoomerUI::onListViewClicked(ListView *lv, fs::path item)
     }
 }
 
-// -------------------------------------------------------------------------------------------------------
-
-// helpers for putting text into fStrBuf and returning it
-const char *BoomerUI::getTextBufInt(const int value)
-{
-    std::snprintf(fStrBuf, 0xff, "%i", value);
-    return fStrBuf;
-}
-
-const char *BoomerUI::getTextBufFloat(const float value)
-{
-    std::snprintf(fStrBuf, 0xff, "%.1f", value);
-    return fStrBuf;
-}
-
-const char *BoomerUI::getTextBufTime(const uint64_t frame)
-{
-    const uint32_t time = frame / uint64_t(fSampleRate);
-    const uint32_t secs = time % 60;
-    const uint32_t mins = (time / 60) % 60;
-    const uint32_t hrs = (time / 3600) % 60;
-    std::snprintf(fStrBuf, 0xff, "%02i:%02i:%02i", hrs, mins, secs);
-    return fStrBuf;
-}
-
-// helpers for drawing text
-void BoomerUI::drawLeft(const float x, const float y, const char *const text)
-{
-    beginPath();
-    fillColor(200, 200, 200);
-    textAlign(ALIGN_RIGHT | ALIGN_TOP);
-    textBox(x, y, 100 * fScale, text);
-    closePath();
-}
-
-void BoomerUI::drawRight(const float x, const float y, const char *const text)
-{
-    beginPath();
-    fillColor(255, 255, 255);
-    textAlign(ALIGN_LEFT | ALIGN_TOP);
-    textBox(x + (105 * fScale), y, 100 * fScale, text);
-    closePath();
-}
 // -----------------------------------------------------------------------------------------------------------
 
 END_NAMESPACE_DISTRHO

@@ -112,12 +112,12 @@ void BoomerPlugin::initParameter(uint32_t index, Parameter &parameter)
   }
 }
 
-float BoomerPlugin::getParameterValue(uint32_t index) const
+float BoomerPlugin::getParameterValue(uint32_t) const
 {
-  return fParameters[index];
+  // do stuff
 }
 
-void BoomerPlugin::setParameterValue(uint32_t index, float value)
+void BoomerPlugin::setParameterValue(uint32_t, float)
 {
   // do stuff
 }
@@ -135,53 +135,25 @@ void BoomerPlugin::run(const float **, float **outputs, uint32_t frames,
   // get time position
   const TimePosition &timePos(getTimePosition());
 
-  // set basic values
-  fParameters[kParameterTimePlaying] = timePos.playing ? 1.0f : 0.0f;
-  fParameters[kParameterTimeFrame] = timePos.frame;
-  fParameters[kParameterTimeValidBBT] = timePos.bbt.valid ? 1.0f : 0.0f;
-
   // set bbt
-  if (timePos.bbt.valid)
-  {
-    if (timePos.playing && song.currentPattern)
-    { // midifile tpq
-      const double midifileTPQ = song.currentPattern->getTPQ(); // hard coded to 1920
-      // tpBeat to tpQ
-      const double beatLowerMultiplier = timePos.bbt.beatType / 4.;
-      const double ticksPerQuarternote = timePos.bbt.ticksPerBeat * beatLowerMultiplier;
-      const double ratio = ticksPerQuarternote / midifileTPQ;
-      song.currentPattern->setBBT(timePos, ratio);
-      for (int delay = 0; delay < frames; ++delay)
-      {
-        song.currentPattern->tick(delay, ratio);
-      }
+  if (timePos.bbt.valid && timePos.playing && song.currentPattern)
+  {                                                           // midifile tpq
+    const double midifileTPQ = song.currentPattern->getTPQ(); // hard coded to 1920
+    // tpBeat to tpQ
+    const double beatLowerMultiplier = timePos.bbt.beatType / 4.;
+    const double ticksPerQuarternote = timePos.bbt.ticksPerBeat * beatLowerMultiplier;
+    const double ratio = ticksPerQuarternote / midifileTPQ;
+    song.currentPattern->setBBT(timePos, ratio);
+    for (int delay = 0; delay < frames; ++delay)
+    {
+      song.currentPattern->tick(delay, ratio);
     }
-
-    fParameters[kParameterTimeBar] = timePos.bbt.bar;
-    fParameters[kParameterTimeBeat] = timePos.bbt.beat;
-    fParameters[kParameterTimeTick] = timePos.bbt.tick;
-    fParameters[kParameterTimeBarStartTick] = timePos.bbt.barStartTick;
-    fParameters[kParameterTimeBeatsPerBar] = timePos.bbt.beatsPerBar;
-    fParameters[kParameterTimeBeatType] = timePos.bbt.beatType;
-    fParameters[kParameterTimeTicksPerBeat] = timePos.bbt.ticksPerBeat;
-    fParameters[kParameterTimeBeatsPerMinute] = timePos.bbt.beatsPerMinute;
-  }
-  else
-  {
-    fParameters[kParameterTimeBar] = 0.0f;
-    fParameters[kParameterTimeBeat] = 0.0f;
-    fParameters[kParameterTimeTick] = 0.0f;
-    fParameters[kParameterTimeBarStartTick] = 0.0f;
-    fParameters[kParameterTimeBeatsPerBar] = 0.0f;
-    fParameters[kParameterTimeBeatType] = 0.0f;
-    fParameters[kParameterTimeTicksPerBeat] = 0.0f;
-    fParameters[kParameterTimeBeatsPerMinute] = 0.0f;
   }
   synth.renderBlock(outputs, frames, 2);
 }
-void BoomerPlugin::bufferSizeChanged(uint32_t newBufferSize)
+void BoomerPlugin::bufferSizeChanged(uint32_t )
 {
-  fParameters[kParameterBufferSize] = newBufferSize;
+  // do stuff
 }
 
 void BoomerPlugin::newEvent(MidiLooper *lp, smf::MidiMessage message, int delay)
