@@ -21,7 +21,7 @@ BoomerPlugin::BoomerPlugin() : Plugin(kParameterCount, 0, 1)
   song.setCallback(this);
 }
 
-String BoomerPlugin::getState(const char *key) const
+String BoomerPlugin::getState(const char *) const
 {
   return String(mf_path.c_str());
 }
@@ -42,78 +42,24 @@ void BoomerPlugin::initState(uint32_t index, String &stateKey, String &defaultSt
 
 void BoomerPlugin::setState(const char *key, const char *value)
 {
+  const MutexLocker cml(fMutex);
   if (std::strcmp(key, "midifile") == 0)
     loadMidifile(value);
 }
 
-void BoomerPlugin::initParameter(uint32_t index, Parameter &parameter)
+void BoomerPlugin::initParameter(uint32_t index, Parameter &)
 {
-  parameter.hints = kParameterIsAutomable | kParameterIsOutput;
-  parameter.ranges.def = 0.0f;
-  parameter.ranges.min = 0.0f;
-  parameter.ranges.max = 16777216.0f;
-
   switch (index)
   {
-  case kParameterBufferSize:
-    parameter.name = "BufferSize";
-    parameter.symbol = "buffer_size";
-    break;
-  case kParameterTimePlaying:
-    parameter.hints |= kParameterIsBoolean;
-    parameter.name = "TimePlaying";
-    parameter.symbol = "time_playing";
-    parameter.ranges.min = 0.0f;
-    parameter.ranges.max = 1.0f;
-    break;
-  case kParameterTimeFrame:
-    parameter.name = "TimeFrame";
-    parameter.symbol = "time_frame";
-    break;
-  case kParameterTimeValidBBT:
-    parameter.hints |= kParameterIsBoolean;
-    parameter.name = "TimeValidBBT";
-    parameter.symbol = "time_validbbt";
-    parameter.ranges.min = 0.0f;
-    parameter.ranges.max = 1.0f;
-    break;
-  case kParameterTimeBar:
-    parameter.name = "TimeBar";
-    parameter.symbol = "time_bar";
-    break;
-  case kParameterTimeBeat:
-    parameter.name = "TimeBeat";
-    parameter.symbol = "time_beat";
-    break;
-  case kParameterTimeTick:
-    parameter.name = "TimeTick";
-    parameter.symbol = "time_tick";
-    break;
-  case kParameterTimeBarStartTick:
-    parameter.name = "TimeBarStartTick";
-    parameter.symbol = "time_barstarttick";
-    break;
-  case kParameterTimeBeatsPerBar:
-    parameter.name = "TimeBeatsPerBar";
-    parameter.symbol = "time_beatsperbar";
-    break;
-  case kParameterTimeBeatType:
-    parameter.name = "TimeBeatType";
-    parameter.symbol = "time_beattype";
-    break;
-  case kParameterTimeTicksPerBeat:
-    parameter.name = "TimeTicksPerBeat";
-    parameter.symbol = "time_ticksperbeat";
-    break;
-  case kParameterTimeBeatsPerMinute:
-    parameter.name = "TimeBeatsPerMinute";
-    parameter.symbol = "time_beatsperminute";
+  default:
+    printf("BoomerPlugin::initParameter %i\n", index);
     break;
   }
 }
 
 float BoomerPlugin::getParameterValue(uint32_t) const
 {
+  return 0.0f;
   // do stuff
 }
 
@@ -123,7 +69,7 @@ void BoomerPlugin::setParameterValue(uint32_t, float)
 }
 
 void BoomerPlugin::run(const float **, float **outputs, uint32_t frames,
-                       const MidiEvent *midiEvents, uint32_t midiEventCount)
+                       const MidiEvent *, uint32_t)
 {
   float *outLeft = outputs[0];
   float *outRight = outputs[1];
@@ -132,6 +78,13 @@ void BoomerPlugin::run(const float **, float **outputs, uint32_t frames,
     outLeft[i] = 0;
     outRight[i] = 0;
   }
+  if (!fMutex.tryLock())
+  {
+    printf("LOCKED! \n");
+    // midi data is locked by setState, so we can't access it; do nothing
+    return;
+  }
+
   // get time position
   const TimePosition &timePos(getTimePosition());
 
@@ -144,19 +97,20 @@ void BoomerPlugin::run(const float **, float **outputs, uint32_t frames,
     const double ticksPerQuarternote = timePos.bbt.ticksPerBeat * beatLowerMultiplier;
     const double ratio = ticksPerQuarternote / midifileTPQ;
     song.currentPattern->setBBT(timePos, ratio);
-    for (int delay = 0; delay < frames; ++delay)
+    for (uint32_t delay = 0; delay < frames; ++delay)
     {
       song.currentPattern->tick(delay, ratio);
     }
   }
+  fMutex.unlock();
   synth.renderBlock(outputs, frames, 2);
 }
-void BoomerPlugin::bufferSizeChanged(uint32_t )
+void BoomerPlugin::bufferSizeChanged(uint32_t)
 {
   // do stuff
 }
 
-void BoomerPlugin::newEvent(MidiLooper *lp, smf::MidiMessage message, int delay)
+void BoomerPlugin::newEvent(MidiLooper *, smf::MidiMessage message, int delay)
 {
   if (message.isNoteOn())
   {

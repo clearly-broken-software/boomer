@@ -14,6 +14,7 @@ TODO: Add license
 #include "sfizz.hpp"
 #include "Song.hpp"
 #include <iostream>
+#include "extra/Mutex.hpp"
 
 START_NAMESPACE_DISTRHO
 
@@ -80,6 +81,7 @@ protected:
   void midifileEnd() override;
 
 private:
+  Mutex fMutex;
   void loadMidifile(const char *path);
   const float transportTPQ{1920.f};
   Song song;
@@ -87,7 +89,7 @@ private:
   double sampleRate;
   sfz::Sfizz synth;
   double tempo;
-  
+
   DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BoomerPlugin)
 };
 

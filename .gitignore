@@ -2,3 +2,6 @@
 plugins/boomer/AVL_Drumkits_1.1-fix
 plugins/boomer/midifile_test
 plugins/boomer/scratchpad
+bin/
+build
+sfizz/dpf-build

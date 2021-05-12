@@ -16,8 +16,8 @@ MidiLooper::MidiLooper() : eventCount(0),
                            midifileTPQ(0),
                            songTotalTicks(0),
                            totalBars(0),
-                           timeSigLower(0.0),
-                           timeSigUpper(0.0),
+                           timeSigLower(4.0),
+                           timeSigUpper(4.0),
                            ticks_per_bar(0.0),
                            transportTPB(0.0)
 {
@@ -38,8 +38,8 @@ MidiLooper::MidiLooper(smf::MidiFile midifile,
                                                          midifileTPQ(0),
                                                          songTotalTicks(0),
                                                          totalBars(0),
-                                                         timeSigLower(0.0),
-                                                         timeSigUpper(0.0),
+                                                         timeSigLower(4.0),
+                                                         timeSigUpper(4.0),
                                                          ticks_per_bar(0.0),
                                                          transportTPB(0.0)
 {
@@ -195,8 +195,6 @@ int MidiLooper::getTotalTicks()
 
 void MidiLooper::getTimeSig()
 {
-    timeSigLower = 4;
-    timeSigUpper = 4;
     for (int i = 0; i < mf[0].size(); ++i)
     {
         if (mf[0][i].isTimeSignature())

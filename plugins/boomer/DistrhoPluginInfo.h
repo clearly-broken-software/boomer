@@ -31,18 +31,6 @@ see https://distrho.github.io/DPF/group__PluginMacros.html
 
 enum Parameters
 {
-    kParameterBufferSize = 0,
-    kParameterTimePlaying,
-    kParameterTimeFrame,
-    kParameterTimeValidBBT,
-    kParameterTimeBar,
-    kParameterTimeBeat,
-    kParameterTimeTick,
-    kParameterTimeBarStartTick,
-    kParameterTimeBeatsPerBar,
-    kParameterTimeBeatType,
-    kParameterTimeTicksPerBeat,
-    kParameterTimeBeatsPerMinute,
     kParameterCount
 };
 
