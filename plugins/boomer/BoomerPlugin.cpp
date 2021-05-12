@@ -137,24 +137,10 @@ void BoomerPlugin::midifileEnd()
 void BoomerPlugin::loadMidifile(const char *path)
 {
   song.addPattern(path);
-  song.nextPattern();
-  //  if (loop2.playing) // prepare buffer 1
-  // {
-  //   midifile1.clear();
-  //   midifile1.read(path);
-  //   loop1 = MidiLooper(midifile1, sampleRate, transportTPQ);
-  //   loop1.setCallback(this);
-
-  //   if (timePos.bbt.valid)
-  //   {
-  //     loop1.setTempo(timePos.bbt.beatsPerMinute, sampleRate, transportTPQ);
-  //   }
-  //   int tick = loop2.getCurrentEventTick();
-  //   int index = loop1.getEventIndex(tick);
-  //   loop1.setEventIndex(index);
-  //   pMidiLooper = &loop1;
-  //   loop1.playing = true;
-  //   return;
-  // }
+  if (song.currentPattern == nullptr)
+    song.nextPattern();
+  else
+    // pointer gets invalidated after addPattern because of push_back
+    song.currentPattern = song.getPatternPtr(song.getClipIndex());
 }
 END_NAMESPACE_DISTRHO

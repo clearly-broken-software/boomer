@@ -13,6 +13,9 @@ class Song
 public:
     Song();
     void setSamplerate(double sr) { sampleRate = sr; };
+    int getClipIndex() { return clip_index; };
+    size_t getSongSize() { return song.size(); };
+    MidiLooper* getPatternPtr(size_t index);
     void addPattern(std::string);
     void nextPattern();
     void setCallback(MidiLooper::Callback *cb);
@@ -20,7 +23,7 @@ public:
     // void seek();
     // void rewind(); // seek(0)
 
-    // current midi patern to play
+    // current midi pattern to play
     MidiLooper *currentPattern;
 
 private:
@@ -40,8 +43,8 @@ private:
         int clipOffset; // in ticks
     };
     std::vector<Clip> song;
-    size_t song_index;
-    int accumOffset;
+    size_t clip_index;
+    int accumClipOffset;
     int songTotalTicks;
 
     MidiLooper::Callback *callBack;

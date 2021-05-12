@@ -3,10 +3,10 @@
 
 START_NAMESPACE_DISTRHO
 
-Song::Song() : song_index(0),
+Song::Song() : clip_index(0),
                sampleRate(48000.),
                currentPattern(nullptr),
-               accumOffset(0),
+               accumClipOffset(0),
                songTPQ(1920)
 {
 }
@@ -24,22 +24,26 @@ void Song::addPattern(std::string path)
                                                 callBack)});
     patterns.back().ml.setTPQ(songTPQ);
     patterns.back().ml.setTotalTicks();
+    patterns.back().ml.setEventIndex(0);
+    std::cout << &patterns.back().ml << std::endl;
     const int tt = patterns.back().ml.getTotalTicks();
     songTotalTicks += tt;
-    song.push_back(Clip{path, accumOffset});
-    accumOffset += tt;
+    song.push_back(Clip{path, accumClipOffset});
+    accumClipOffset += tt;
 }
 
 void Song::nextPattern()
 {
     // get path
-    if (song_index >= 0 && song_index < song.size())
+
+    if (clip_index >= 0 && clip_index < song.size())
     {
-        std::string path = song[song_index].path;
-        int clipOffset = song[song_index].clipOffset;
+        std::string path = song[clip_index].path;
+        int clipOffset = song[clip_index].clipOffset;
         // find pattern
         printf("getting %s\n", path.c_str());
-        auto it = std::find_if(patterns.begin(), patterns.end(), [path](Pattern p) { return p.id == path; });
+        auto it = std::find_if(patterns.begin(), patterns.end(), [path](Pattern p)
+                               { return p.id == path; });
         if (it != patterns.end())
         {
             // set pointer to midifile to be played
@@ -49,13 +53,28 @@ void Song::nextPattern()
             currentPattern->setEventIndex(0);
 
             // advance index for when this function is called again
-            song_index++;
-            if (song_index >= patterns.size())
+            clip_index++;
+            if (clip_index >= patterns.size())
             {
-                song_index = 0;
+                clip_index = 0;
             }
         }
     }
+}
+
+MidiLooper *Song::getPatternPtr(size_t index)
+{
+    if (clip_index >= 0 && clip_index < song.size())
+    {
+        std::string path = song[clip_index].path;
+        auto it = std::find_if(patterns.begin(), patterns.end(), [path](Pattern p)
+                               { return p.id == path; });
+        if (it != patterns.end())
+        {
+            return &it->ml;
+        }
+    }
+    return nullptr; 
 }
 
 END_NAMESPACE_DISTRHO
